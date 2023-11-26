@@ -99,20 +99,32 @@ class Eum {
   /**
    * Use Eson to play audio
    * @param {string} [instrument] - Instruments name. If is not in ['sine', 'square', 'sawtooth', or 'triangle'] , the second param is needed.
+   * @param {string} [src] - Audio file path for custom instrument.
    * @returns {undefined | false}
    */
-  playAudio(instrument='sine',src='') {
-    for(const e of this.$){
+  play(instrument = 'sine', src = '') {
+    for (const e of this.$) {
       const a = this.#AudioContext
       const o = a.createOscillator()
       const gain = a.createGain()
+      const source = audioContext.createBufferSource()
+
+      // prepare instrument
       switch (instrument) {
-        case sine:
+        case 'sine':
+        case 'square':
+        case 'sawtooth':
+        case 'triangle':
           
-          break;
-      
         default:
-          break;
+          // get src sound file
+          const request = new XMLHttpRequest()
+          request.open('GET', src, true)
+          request.responseType = 'arraybuffer'
+          request.onload = _ => {
+            a.decodeAudioData(request.response, buffer => { source.buffer = buffer })
+          }
+        // play Custom Instrument
       }
       // PLAY WITH o
       // this.#AudioContext
