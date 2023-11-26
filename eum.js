@@ -1,6 +1,7 @@
 class Eum {
 
 //CONSTS
+    #AudioContext = new (window.AudioContext || window.webkitAudioContext)()
     #A4 = 440
     #itv = Math.pow(2, 1/12)
 
@@ -15,13 +16,14 @@ class Eum {
 
 //CONSTRUCT
     constructor(EUM){
+        
         /**
          * @name Eson
          * @description Compiled stuff.
          */
         this.$=[]
 
-        // compile(E) config
+     // compile(E) config
         this.note  = 'c'
         this.signa = '4/4'
         this.tempo = 120
@@ -48,20 +50,36 @@ class Eum {
     compile(E){if(typeof E !== 'string'){
         return false;
     }else{
+        // init
         this.l = E.length
+        const positionOf = i=>{
+
+        }
+        const ermsg = (i,msg='unknown error')=>{return `[Eum] SYNTAX ERROR: ${msg} - AT ${positionOf(i)}`}
+
+        // funcs
+        const recognize = i=>{
+            const x=E[i]
+            if(x==='['){
+                const close = E.indexOf(']',i)
+                if(close === -1){
+                    return ermsg(i,'square bracket not closed')
+                }
+            }else if(1){
+
+            }else{
+                return ermsg(i,`unexpected "${x}"`)
+            }
+        }
+
+        // run compile
         this.$.push({
             pitch: null,
             time:  1000,
         })
-        const recognize = i=>{
-            switch (E[i]) {
-                case value:
-                    
-                    break;
-            
-                default:
-                    break;
-            }
+        if(this.currCursor<this.l){
+            recognize(E(this.currCursor))
+            this.currCursor++
         }
 
     }}
