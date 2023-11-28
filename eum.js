@@ -4,13 +4,15 @@ class Eum {
 
   //CONSTS
   #AudioContext = new (window.AudioContext || window.webkitAudioContext)()
-  #A4 = 440
+  #A4 = 440.0
   #itv = Math.pow(2, 1 / 12)
 
   // Config Definition Regexs
+  // 1. `[]` Brackets
   #isNote = /^( +)?1( +)?=( +)?([A-Ga-g])(#|b)?(m)?([0-9]|1[0-2])?( +)?$/
   #isTempo = /^( +)?(V|v|T|t)( +)?=( +)?(\d+)( +)?$/
-  #isSigna = /^( +)?([2-9]|[1-9][0-9]|1[0-9][0-9])( +)?(\/)( +)?(1|2|4|8|16|32|64)( +)?$/
+  #isSigna = /^( +)?(0|[2-9]|[1-9][0-9]|1[0-9][0-9])( +)?(\/)( +)?(0|1|2|4|8|16|32|64)( +)?$/
+  #isTriplets = /^( +)?3( +)?$/
 
   // Cipher Regexs
   #isDef = /^\[$/
@@ -21,20 +23,25 @@ class Eum {
   constructor(EUM) {
 
     /**
+     * Compiled Eum
+     * @type {Object[]} Eson Objects
      * @name Eson
      * @description Compiled stuff.
      */
     this.$ = []
 
-    // compile(E) config
+    // defaults
     this.defaultNote = 'C4'
-    this.defaultTempo = 120
+    this.defaultTempo = 120 // Beat per Min
     this.defaultSigna = '4/4'
-    this.note = this.defaultNote
-    this.tempo = this.defaultTempo
-    this.signa = this.defaultSigna
-    this.cursor = 0
+    this.defaultWhole = 60000 / this.defaultTempo
 
+    // compile(E) config
+    this.cursor = 0
+    this.compileNote = this.defaultNote
+    this.compileTempo = this.defaultTempo
+    this.compileSigna = this.defaultSigna
+    this.compileWhole =  60000 / this.compileTempo
     /** Length of inputted string of Eum */
     this.eumLength = 0
 
@@ -68,12 +75,12 @@ class Eum {
    * @returns {number} Delay time (ms)
    * @throws Not a tempo
    */
-  calcTempo(t, msg = ''){
-    if(t<0){
+  calcTempo(t, msg = '') {
+    if (t < 0) {
       const err = `Eum error:\n"${t}" is not a tempo`
       if (msg !== '') { err += `\n${msg}` }
       throw new Error(err)
-    }else{
+    } else {
       return 0// ???????????????
     }
   }
@@ -116,16 +123,20 @@ class Eum {
           const ctt = x.slice(i + 1, close)
           switch (true) {
             case this.#isNote.test(x):
-              this.note = x.toUpperCase
-              break
-            case this.#isSigna.test(x):
-              this.signa = x
+              this.compileNote = x.replace(/ /g, '').slice(2)
               break
             case this.#isTempo.test(x):
-              this.tempo
+              this.compileTempo = Number(x.replace(/ /g, '').slice(2))
+              break
+            case this.#isSigna.test(x):
+              this.compileSigna = x
+              break
+            case this.#isTriplets.test(x):
+              // ?????????????
+              break
           }
           if (close === -1) { syntaxError(i, '"]" expected') }
-        } else if (1) {
+        } else if (x === '1') {
 
         } else { syntaxError(i, `Unexpected token "${x}"`) }
       }
@@ -135,10 +146,11 @@ class Eum {
         pitch: null,
         time: 1000,
       })
-      if (this.currCursor < this.eumLength) {
+      while (this.currCursor < this.eumLength) {
         recognize(E[this.currCursor])
         this.currCursor++
       }
+      return this.$
     }
   }
 
