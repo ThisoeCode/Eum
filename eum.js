@@ -4,20 +4,37 @@ class Eum {
 
   //CONSTS
   #AudioContext = new (window.AudioContext || window.webkitAudioContext)()
-  #A4 = 440.0
-  #itv = Math.pow(2, 1 / 12)
+
+  /** Standard Frequency */
+  #C4 = 440.0
+  /** Half step frequency  */
+  #step = Math.pow(2, 1 / 12)
 
   // Config Definition Regexs
-  // 1. `[]` Brackets
-  #isNote = /^( +)?1( +)?=( +)?([A-Ga-g])(#|b)?(m)?([0-9]|1[0-2])?( +)?$/
+  // 1. `[]` brackets
+  #isNote = /^( +)?1( +)?=( +)?([A-Ga-g])(#|[b|♭])?(m)?([0-9]|1[0-2])?( +)?$/
   #isTempo = /^( +)?(V|v|T|t)( +)?=( +)?(\d+)( +)?$/
   #isSigna = /^( +)?(0|[2-9]|[1-9][0-9]|1[0-9][0-9])( +)?(\/)( +)?(0|1|2|4|8|16|32|64)( +)?$/
-  #isTriplets = /^( +)?3( +)?$/
-
-  // Cipher Regexs
-  #isDef = /^\[$/
-  #isSound = /^0-6$/
-  #isBar = /^\/$/
+  #isTriplet = /^( +)?3( +)?$/
+  #isTuplet = /^( +)?([2-9]|1[0-6])( +)?:( +)?[1-9]|:1[0-6]( +)?$/
+  // 2. sound
+  #isSound = /^[1-7]$/
+  // 3. 
+  #noteOffsets = {
+    'B#': 0, 'C': 0, 'C#': 1, 'Db': 1,
+    'D': 2, 'D#': 3, 'Eb': 3,
+    'E': 4, 'Fb': 4, 'E#': 5, 'F': 5,
+    'F#': 6, 'Gb': 6, 'G': 7,
+    'G#': 8, 'Ab': 8, 'A': 9,
+    'A#': 10, 'Bb': 10, 'B': 11, 'Cb': 11
+  }
+  #isValidMinor = ['am', // ♮
+    'em', 'bm', 'f#m', 'c#m', 'g#m', 'd#m', 'a#m', // #
+    'dm', 'gm', 'cm', 'fm', 'bbm', 'ebm', 'abm', // b
+  ]
+  #minorOffsets = {
+    // ??????????
+  }
 
   //CONSTRUCT
   constructor(EUM) {
@@ -29,6 +46,8 @@ class Eum {
      * @description Compiled stuff.
      */
     this.$ = []
+    /** Length of inputted string of Eum */
+    this.eumLength = 0
 
     // defaults
     this.defaultNote = 'C4'
@@ -41,14 +60,12 @@ class Eum {
     this.compileNote = this.defaultNote
     this.compileTempo = this.defaultTempo
     this.compileSigna = this.defaultSigna
-    this.compileWhole =  60000 / this.compileTempo
-    /** Length of inputted string of Eum */
-    this.eumLength = 0
+    this.compileWhole = 60000 / this.compileTempo
 
     this.newSound = null
     this.newLength = 0
 
-    compile(EUM)
+    if (EUM !== undefined) compile(EUM)
   }
 
   //METHODS
@@ -60,12 +77,16 @@ class Eum {
    * @throws Not a note
    */
   calcNote(n, msg = '') {
-    if (!this.#isNote.test(n)) {
+    const notnote = _ => {
       const err = `Eum error:\n"${n}" is not a note`
       if (msg !== '') { err += `\n${msg}` }
       throw new Error(err)
-    } else {
-      return 0// ???????????????
+    }
+    if (!this.#isNote.test(n)) {
+      notnote()
+    }
+    if (n.includes('m')) {
+      if (a) { }
     }
   }
 
@@ -117,28 +138,71 @@ class Eum {
       // funcs
       const recognize = i => {
         const x = E[i]
-        if (x === '[') {
-          const close = E.indexOf(']', i)
-          this.cursor = close
-          const ctt = x.slice(i + 1, close)
-          switch (true) {
-            case this.#isNote.test(x):
-              this.compileNote = x.replace(/ /g, '').slice(2)
-              break
-            case this.#isTempo.test(x):
-              this.compileTempo = Number(x.replace(/ /g, '').slice(2))
-              break
-            case this.#isSigna.test(x):
-              this.compileSigna = x
-              break
-            case this.#isTriplets.test(x):
-              // ?????????????
-              break
-          }
-          if (close === -1) { syntaxError(i, '"]" expected') }
-        } else if (x === '1') {
 
-        } else { syntaxError(i, `Unexpected token "${x}"`) }
+        switch (x) {
+          case '[':
+            const close = E.indexOf(']', i)
+            this.cursor = close
+            const ctt = x.slice(i + 1, close)
+            switch (true) {
+              case this.#isNote.test(x):
+                this.compileNote = x.replace(/ /g, '').slice(2) // TOLOWERCASE & CHANGE '♭' TO 'b'!!!!!!!
+                break
+              case this.#isTempo.test(x):
+                this.compileTempo = Number(x.replace(/ /g, '').slice(2))
+                break
+              case this.#isSigna.test(x):
+                this.compileSigna = x
+                break
+              case this.#isTriplet.test(x):
+                // ?????????????
+                break
+            }
+            if (close === -1) { syntaxError(i, '"]" expected') }
+
+            break
+
+          case '(':
+
+            break
+
+          case ')':
+
+            break
+
+          case '/':
+
+            break
+
+          case ':':
+
+            break
+
+          case '♮':
+          case 'n':
+
+            break
+
+          case '#':
+
+            break
+
+          case 'b':
+          case '♭':
+
+            break
+
+          case '0':
+
+            break
+
+          default:
+            if (this.#isSound.test(x)) {
+
+            } else {
+              syntaxError(i, `Unexpected token "${x}"`)
+            }
+        }
       }
 
       // run compile
