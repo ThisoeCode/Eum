@@ -12,14 +12,14 @@ class Eum {
 
   // Config Definition Regexs
   // 1. `[]` brackets
-  #isNote = /^( +)?1( +)?=( +)?([A-Ga-g])(#|[b|♭])?(m)?([0-9]|1[0-2])?( +)?$/
-  #isTempo = /^( +)?(V|v|T|t)( +)?=( +)?(\d+)( +)?$/
-  #isSigna = /^( +)?(0|[2-9]|[1-9][0-9]|1[0-9][0-9])( +)?(\/)( +)?(0|1|2|4|8|16|32|64)( +)?$/
-  #isTriplet = /^( +)?3( +)?$/
-  #isTuplet = /^( +)?([2-9]|1[0-6])( +)?:( +)?[1-9]|:1[0-6]( +)?$/
+  #isNote = /^1=([A-Ga-g])(#|[b|♭])?(m)?([0-9]|1[0-2])?$/
+  #isTempo = /^(V|v|T|t)=(\d+)$/
+  #isSigna = /^(0|[2-9]|[1-9][0-9]|1[0-9][0-9])(\/)(0|1|2|4|8|16|32|64)$/
+  #isTriplet = /^3$/
+  #isTuplet = /^([2-9]|1[0-6]):[1-9]|:1[0-6]$/
   // 2. sound
   #isSound = /^[1-7]$/
-  // 3. 
+  // 3. recognize notes
   #noteOffsets = {
     'B#': 0, 'C': 0, 'C#': 1, 'Db': 1,
     'D': 2, 'D#': 3, 'Eb': 3,
@@ -28,24 +28,30 @@ class Eum {
     'G#': 8, 'Ab': 8, 'A': 9,
     'A#': 10, 'Bb': 10, 'B': 11, 'Cb': 11
   }
-  #isValidMinor = ['am', // ♮
-    'em', 'bm', 'f#m', 'c#m', 'g#m', 'd#m', 'a#m', // #
-    'dm', 'gm', 'cm', 'fm', 'bbm', 'ebm', 'abm', // b
+  #isValidMinor = [
+    // ♮
+    'am',
+    // #
+    'em', 'bm', 'f#m', 'c#m', 'g#m', 'd#m', 'a#m',
+    // b
+    'dm', 'gm', 'cm', 'fm', 'bbm', 'ebm', 'abm',
   ]
   #minorOffsets = {
     // ??????????
   }
+
+
 
   //CONSTRUCT
   constructor(EUM) {
 
     /**
      * Compiled Eum
-     * @type {Object[]} Eson Objects
+     * @type {Object[] | null} Eson Objects
      * @name Eson
      * @description Compiled stuff.
      */
-    this.$ = []
+    this.$ = null
     /** Length of inputted string of Eum */
     this.eumLength = 0
 
@@ -65,8 +71,10 @@ class Eum {
     this.newSound = null
     this.newLength = 0
 
-    if (EUM !== undefined) compile(EUM)
+    if (typeof EUM === 'string') compile(EUM)
   }
+
+
 
   //METHODS
 
@@ -130,7 +138,7 @@ class Eum {
 
     // main
     if (typeof E !== 'string') {
-      throw new Error('[Eum] Eum compiler expects a string type parameter')
+      throw new Error('[Eum] Eum.compiler expects a string type parameter')
     } else {
       // init constructor
       this.eumLength = E.length
@@ -142,23 +150,42 @@ class Eum {
         switch (x) {
           case '[':
             const close = E.indexOf(']', i)
+            if (close === -1) syntaxError(i, '"]" expected')
             this.cursor = close
-            const ctt = x.slice(i + 1, close)
+            const ctt = x.slice(i + 1, close).replace(/ /g, '')
             switch (true) {
-              case this.#isNote.test(x):
-                this.compileNote = x.replace(/ /g, '').slice(2) // TOLOWERCASE & CHANGE '♭' TO 'b'!!!!!!!
+              case this.#isNote.test(ctt):
+                let recogNote = ctt.slice(2).toLowerCase().replace(/♭/, 'b')
+                if (recogNote.indexOf('m') !== -1) {
+                  if (this.#isValidMinor.includes(recogNote)) {
+                    this.compileNote = recogNote
+                  } else {
+                    syntaxError(i + 2, `"${recogNote}" is not a valid minor note`)
+                  }
+                } else {
+                  this.compileNote = recogNote
+                }
                 break
-              case this.#isTempo.test(x):
-                this.compileTempo = Number(x.replace(/ /g, '').slice(2))
+
+              case this.#isTempo.test(ctt):
+                this.compileTempo = Number(ctt.slice(2))
                 break
-              case this.#isSigna.test(x):
-                this.compileSigna = x
+
+              case this.#isSigna.test(ctt):
+                this.compileSigna = ctt
                 break
-              case this.#isTriplet.test(x):
+
+              case this.#isTriplet.test(ctt):
                 // ?????????????
                 break
+
+              case this.#isTuplet.test(ctt):
+                // ?????????????
+                break
+
+              default:
+
             }
-            if (close === -1) { syntaxError(i, '"]" expected') }
 
             break
 
@@ -187,8 +214,8 @@ class Eum {
 
             break
 
-          case 'b':
           case '♭':
+          case 'b':
 
             break
 
@@ -222,8 +249,8 @@ class Eum {
    * Use Eson to play audio
    * @param {string} [instrument] Instruments name. If is not in ['sine', 'square', 'sawtooth', or 'triangle'] , the second param is needed.
    * @param {string} [src] Audio file path for custom instrument.
-   * @returns {undefined}
-   * @throws Compile errors
+   * @returns {Promise}
+   * @throws Playing errors
    */
   play(instrument = 'sine', src = '') {
     for (const e of this.$) {
@@ -256,6 +283,31 @@ class Eum {
     }
   }
 
+  /**
+   * Use Eson to play audio with oscillator
+   * @param {string} [type] Valid types of oscillator: "sine" | "square" | "sawtooth" | "triangle"
+   * @returns {Promise}
+   * @throws Playing errors
+   */
+  oscillator(type = 'sine') {
+    if ((typeof type !== 'string') || !(/^(sine|square|sawtooth|triangle)$/.test(type))) {
+      throw new Error(`[Eum] Eum.oscillator recieved an unexpected value:\nValid types of oscillator: "sine" | "square" | "sawtooth" | "triangle"`)
+    }
+    if (this.$ !== null) {
+      this.$.forEach(obj => {
+        const o = this.#AudioContext.createOscillator()
+        o.frequency.value = obj.hz
+        o.type = type
+        o.connect(this.#AudioContext.destination)
+        o.start()
+        o.stop(this.#AudioContext.currentTime + (obj.ms / 1000))
+      })
+    }
+
+  }
+
 }
+
+
 
 export default Eum
